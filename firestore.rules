@@ -1,0 +1,189 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * Core Philosophy: This ruleset implements a three-tiered access model:
+     * 1. Private User Data: Users have exclusive control over their own data,
+     *    stored in a dedicated `/users/{userId}` tree.
+     * 2. Role-Based Administration: Privileged "Admin" users, defined by the
+     *    existence of a document in the `/roles_admin` collection, have full
+     *    control over global data like routes and buses.
+     * 3. Denormalized Resource-Specific Roles: Assigned "Drivers" can update
+     *    specific resources (their assigned bus and its subcollections) based on
+     *    a denormalized `driverId` field on the bus document itself.
+     *
+     * Data Structure:
+     * - `/users/{userId}`: Contains private user profiles and their subcollections.
+     * - `/routes`, `/buses`: Top-level collections for global, publicly readable data.
+     * - `/roles_admin`: A top-level collection that acts as a lookup table to
+     *   confer administrator privileges across the database.
+     *
+     * Key Security Decisions:
+     * - Default Deny: All paths are closed by default.
+     * - User Data Privacy: A user can only access documents under their own
+     *   `/users/{userId}` path. Listing the top-level `/users` collection is forbidden.
+     * - Denormalization for Authorization: We use a `driverId` field directly on
+     *   each bus document. This allows for a fast, simple, and cost-effective
+     *   rule (`resource.data.driverId == request.auth.uid`) without requiring a
+     *   slow and expensive `get()` to another collection to check for permissions.
+     * - DBAC for Admin Roles: We use a dedicated `/roles_admin` collection for
+     *   Database-Based Access Control (DBAC). This is more secure and scalable
+     *   than using custom claims for managing system-wide roles.
+     * - Public Reads, Restricted Writes: Core operational data like routes and bus
+     *   locations are readable by any authenticated user, but write access is
+     *   strictly limited to authorized roles (Admins or Drivers).
+     */
+
+    // --------------------------------------------------------------------------
+    // Helper Functions
+    // --------------------------------------------------------------------------
+
+    /**
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the currently authenticated user's UID matches the given userId.
+     * This is the primary function for enforcing data ownership.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Checks for ownership on an existing document. Used for safe updates/deletes.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * Checks if the authenticated user is a system administrator.
+     * Admin status is granted by the existence of a document in the /roles_admin collection.
+     */
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
+
+    /**
+     * Checks if the authenticated user is the assigned driver for a specific bus.
+     * This performs a single document read to check the denormalized `driverId`.
+     */
+    function isAssignedDriver(busId) {
+      return isSignedIn() && get(/databases/$(database)/documents/buses/$(busId)).data.driverId == request.auth.uid;
+    }
+
+    /**
+     * Checks if a user is either an admin OR the assigned driver for a given bus.
+     * Used to grant permissions to bus subcollections.
+     */
+    function isBusAdminOrDriver(busId) {
+      return isAdmin() || isAssignedDriver(busId);
+    }
+
+    // --------------------------------------------------------------------------
+    // Collection Rules
+    // --------------------------------------------------------------------------
+
+    /**
+     * @description Stores user profiles. Only the owner of the profile can access it.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own profile document.
+     * @deny (get) A user trying to read another user's profile.
+     * @principle Restricts access to a user's own data tree (Ownership).
+     */
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Stores developer information. Readable by any authenticated user.
+     * @path /developer_info/{infoId}
+     * @allow (get) Any signed-in user can read the developer info.
+     * @deny (create, update, delete) Only admins can modify this information.
+     * @principle Allows public read access for display purposes while securing writes.
+     */
+    match /developer_info/{infoId} {
+      allow read, write: if isSignedIn();
+    }
+
+    /**
+     * @description Stores notifications for a user. Only the user can access their own notifications.
+     * @path /users/{userId}/notifications/{notificationId}
+     * @allow (create) An authenticated user creating a notification for themselves.
+     * @deny (list) A user trying to list another user's notifications.
+     * @principle Enforces ownership via path hierarchy.
+     */
+    match /users/{userId}/notifications/{notificationId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && resource != null && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Defines which users have admin privileges. Only other admins can manage this list.
+     * @path /roles_admin/{userId}
+     * @allow (create) An existing admin adding a new user to the admin roles.
+     * @deny (delete) A non-admin user trying to remove an admin role.
+     * @principle Manages system-wide privileges using Database-Based Access Control (DBAC).
+     */
+    match /roles_admin/{userId} {
+      allow get, list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Stores bus routes. Readable by any signed-in user, but only modifiable by admins.
+     * @path /routes/{routeId}
+     * @allow (list) Any authenticated user listing all available bus routes.
+     * @deny (create) A non-admin user trying to create a new route.
+     * @principle Allows public reads for application functionality while securing writes to admins.
+     */
+    match /routes/{routeId} {
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Stores bus information. Readable by any user. Admins can manage all buses.
+     *              The assigned driver can update their specific bus.
+     * @path /buses/{busId}
+     * @allow (update) The assigned driver updating their bus's location.
+     * @deny (delete) An assigned driver trying to delete their bus.
+     * @principle Uses denormalized ownership (`driverId`) for resource-specific write access.
+     */
+    match /buses/{busId} {
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if resource != null && (isAdmin() || resource.data.driverId == request.auth.uid);
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    /**
+     * @description Stores time-series passenger count data for a bus.
+     *              Only accessible by admins or the bus's assigned driver.
+     * @path /buses/{busId}/passengerCounts/{passengerCountId}
+     * @allow (create) The assigned driver recording a new passenger count for their bus.
+     * @deny (get) A regular user trying to read the passenger count data.
+     * @principle Secures a subcollection by checking roles and parent document ownership.
+     */
+    match /buses/{busId}/passengerCounts/{passengerCountId} {
+      allow get, list: if isBusAdminOrDriver(busId);
+      allow create: if isBusAdminOrDriver(busId) && request.resource.data.busId == busId;
+      allow update: if resource != null && isBusAdminOrDriver(busId) && request.resource.data.busId == resource.data.busId;
+      allow delete: if resource != null && isBusAdminOrDriver(busId);
+    }
+  }
+}

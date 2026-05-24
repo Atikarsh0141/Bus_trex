@@ -1,0 +1,391 @@
+
+{
+  "entities": {
+    "Bus": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Bus",
+      "type": "object",
+      "description": "Represents a bus in the system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the bus."
+        },
+        "routeId": {
+          "type": "string",
+          "description": "Reference to Route. (Relationship: Route 1:N Bus)"
+        },
+        "driverId": {
+          "type": "string",
+          "description": "Reference to Driver. (Relationship: Driver 1:N Bus)"
+        },
+        "capacity": {
+          "type": "number",
+          "description": "Maximum passenger capacity of the bus."
+        },
+        "currentLocationLat": {
+          "type": "number",
+          "description": "Current latitude of the bus."
+        },
+        "currentLocationLon": {
+          "type": "number",
+          "description": "Current longitude of the bus."
+        }
+      },
+      "required": [
+        "id",
+        "routeId",
+        "driverId",
+        "capacity",
+        "currentLocationLat",
+        "currentLocationLon"
+      ]
+    },
+    "Route": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Route",
+      "type": "object",
+      "description": "Represents a bus route.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the route."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the route."
+        },
+        "waypoints": {
+          "type": "array",
+          "description": "Ordered list of waypoints (latitude/longitude pairs) for the route.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "schedule": {
+          "type": "string",
+          "description": "The schedule for the bus route, represented as a string."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "waypoints",
+        "schedule"
+      ]
+    },
+    "Driver": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Driver",
+      "type": "object",
+      "description": "Represents a bus driver.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the driver."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "First name of the driver."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the driver."
+        },
+        "contactNumber": {
+          "type": "string",
+          "description": "The drivers contact number"
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName"
+      ]
+    },
+    "UserNotification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserNotification",
+      "type": "object",
+      "description": "Represents a notification sent to a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the notification."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N UserNotification)"
+        },
+        "message": {
+          "type": "string",
+          "description": "The content of the notification."
+        },
+        "type": {
+          "type": "string",
+          "description": "The medium for the notification (e.g., 'sms', 'email', 'push')."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the notification was sent.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "message",
+        "type",
+        "timestamp"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "name": {
+          "type": "string",
+          "description": "Full name of the user."
+        },
+        "age": {
+          "type": "number",
+          "description": "Age of the user."
+        },
+        "gender": {
+          "type": "string",
+          "enum": [
+            "Male",
+            "Female",
+            "Other",
+            "Prefer not to say"
+          ],
+          "description": "Gender of the user."
+        },
+        "notificationPreferences": {
+          "type": "string",
+          "enum": [
+            "push",
+            "sms",
+            "inApp"
+          ],
+          "description": "User's preferred notification channels (e.g., 'sms,email')."
+        },
+        "role": {
+          "type": "string",
+          "description": "The user's role in the system (e.g., 'passenger', 'driver', 'admin')."
+        }
+      },
+      "required": [
+        "id",
+        "email"
+      ]
+    },
+    "PassengerCount": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PassengerCount",
+      "type": "object",
+      "description": "Represents passenger counts for a bus at a given time.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the passenger count record."
+        },
+        "busId": {
+          "type": "string",
+          "description": "Reference to Bus. (Relationship: Bus 1:N PassengerCount)"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp of when the passenger count was recorded.",
+          "format": "date-time"
+        },
+        "passengerCount": {
+          "type": "number",
+          "description": "Number of passengers on the bus."
+        }
+      },
+      "required": [
+        "id",
+        "busId",
+        "timestamp",
+        "passengerCount"
+      ]
+    },
+    "DeveloperInfo": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DeveloperInfo",
+      "description": "Stores information about the app developer.",
+      "type": "object",
+      "properties": {
+        "appCreatorName": {
+          "type": "string"
+        },
+        "workingEmail": {
+          "type": "string"
+        },
+        "roleDescription": {
+          "type": "string"
+        },
+        "vision": {
+          "type": "string"
+        },
+        "technologies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "purpose": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "appCreatorName",
+        "workingEmail"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous",
+      "google.com"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Accessible only by the user themselves.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/developer_info/{infoId}",
+        "definition": {
+          "entityName": "DeveloperInfo",
+          "schema": {
+            "$ref": "#/backend/entities/DeveloperInfo"
+          },
+          "description": "Stores developer information for the about page.",
+          "params": [
+            {
+              "name": "infoId",
+              "description": "A singleton document ID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/notifications/{notificationId}",
+        "definition": {
+          "entityName": "UserNotification",
+          "schema": {
+            "$ref": "#/backend/entities/UserNotification"
+          },
+          "description": "Stores notifications for a specific user. Accessible only by the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "notificationId",
+              "description": "The unique identifier of the notification."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/routes/{routeId}",
+        "definition": {
+          "entityName": "Route",
+          "schema": {
+            "$ref": "#/backend/entities/Route"
+          },
+          "description": "Stores bus route information. Accessible and modifiable only by administrators.",
+          "params": [
+            {
+              "name": "routeId",
+              "description": "The unique identifier of the bus route."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/buses/{busId}",
+        "definition": {
+          "entityName": "Bus",
+          "schema": {
+            "$ref": "#/backend/entities/Bus"
+          },
+          "description": "Stores bus information. Includes denormalized 'driverId' for authorization independence. Accessible to administrators, and the assigned driver can update the bus location.",
+          "params": [
+            {
+              "name": "busId",
+              "description": "The unique identifier of the bus."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/buses/{busId}/passengerCounts/{passengerCountId}",
+        "definition": {
+          "entityName": "PassengerCount",
+          "schema": {
+            "$ref": "#/backend/entities/PassengerCount"
+          },
+          "description": "Stores passenger count data for a specific bus. Accessible to administrators and potentially the assigned driver.",
+          "params": [
+            {
+              "name": "busId",
+              "description": "The unique identifier of the bus."
+            },
+            {
+              "name": "passengerCountId",
+              "description": "The unique identifier of the passenger count record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/roles_admin/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Indicates administrator roles. Existence of a document grants admin privileges.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to address the application requirements while adhering to the principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), QAPs (Queries are not Filters), and Invariants. The structure leverages denormalization to avoid hierarchical authorization dependencies and ensures secure list operations.\n\n1.  **Users (Private Data):** User data is stored under `/users/{userId}`. This is a standard, secure pattern for user-owned data. The user can only access their data. `QAPs` are inherently supported as listing on `/users` is not permitted.\n\n2.  **User Notifications (User-Owned Data):** Each user's notifications are stored in a subcollection `/users/{userId}/notifications/{notificationId}`. This enables efficient retrieval of notifications for a specific user and leverages path-based ownership for security. Only a user can access their own notifications. `QAPs` are inherently supported.\n\n3.  **Routes (Global Data, Admin Access):** Routes are stored in the `/routes/{routeId}` collection.  Access is restricted to administrators. A separate `/roles_admin/{userId}` collection will determine admin status. `QAPs` are supported as listing `/routes` is permitted, but creation/modification is restricted to users with a document in `/roles_admin/{userId}`.\n\n4.  **Buses (Global Data, Driver/Admin Access):** Buses are stored in the `/buses/{busId}` collection. Each bus document includes a `driverId` field indicating the assigned driver. This enables rules to allow a driver to update the bus's location if `request.auth.uid == resource.data.driverId`. Admins, determined by their presence in the `/roles_admin/{userId}` collection, can manage all buses. `QAPs` are supported as listing `/buses` is permitted, with modification rights determined as outlined above. The `driverId` facilitates authorization independence.\n\n5.  **PassengerCounts (Bus-Owned Data):** Passenger counts for each bus are stored in the `/buses/{busId}/passengerCounts/{passengerCountId}` subcollection. This allows easy querying of passenger counts for a specific bus. This path enforces that the bus owns the `passengerCount` document. \n\n**Authorization Independence:**\n\n*   The `driverId` field within the `buses` collection is a denormalized field. It is used to grant drivers permission to update the location of their assigned bus without needing to `get()` the driver's document. This ensures authorization independence.\n\n**QAPs Support:**\n\n*   The segregation of user data (`/users/{userId}`) and global data (`/buses`, `/routes`) allows for efficient and secure `list` operations. Admin roles control the ability to create and modify global data.\n\n**Additional Notes:**\n\n*   Timestamps for `UserNotification` and `PassengerCount` are crucial for filtering and ordering data. Ensure these timestamps are properly indexed.\n*   Consider adding indexes for common queries, such as retrieving buses by `routeId` or notifications by `userId` and `timestamp`.\n*   The absence of a dedicated chat system simplifies the data structure. If a chat system is implemented, consider using a separate collection like `/chats/{chatId}/messages/{messageId}` and managing access through a membership map (`members: {uid1: 'role', uid2: 'role'}`)."
+  }
+}
